@@ -1,6 +1,8 @@
 Getting started
 ================================
+
 git clone https://github.com/shiquan/bedutils.git
+
 cd bedutils; make
 
 Introduction
