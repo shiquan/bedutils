@@ -296,7 +296,7 @@ int countHelp()
 void count_regions(bedaux_t *bed)
 {
     if ( bed == NULL ) return;
-    int i, j, l;
+    int i, l;
     regHash_t *rgh = bed->hfiles[0]->reg;
     writeout("#chr\tstart\tend\tcount\n");
     for ( l = 0; l < bed->n_seq; ++l )

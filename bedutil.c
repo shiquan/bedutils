@@ -343,7 +343,6 @@ static bedreglist_t * reg_clone(bedreglist_t * bed)
 }
 static bedreglist_t * reg_merge(bedreglist_t ** beds, int n_beds)
 {
-    int i, j;
     bedreglist_t *bed = reg_add(beds, n_beds);
     regcore_merge(bed);
     return bed;
@@ -623,7 +622,6 @@ static bedreglist_t * reg_diff(bedreglist_t ** regs, int n_regs)
 
 static bedreglist_t * reg_comp(bedreglist_t **regs, int n_regs)
 {
-    int i, j = 0;
     if ( n_regs == 1 ) {
 	bedreglist_t *bed = reg_clone(regs[0]);
 	regcore_merge(bed);
@@ -762,7 +760,6 @@ static bedaux_t * bed_handle(bedaux_t *beds, handle_func func, int *check_error)
     beda->hfiles[0]->reg = kh_init(reg);
     beda->region = beda->length = 0;
     int i,j;
-    int m = 0;
     //int skip_tag;
     for ( i = 0; i < beds->n_seq; ++i )
     {
