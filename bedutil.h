@@ -50,6 +50,8 @@
 
 #define maxlen(b) ((b)->m > 0 ? (uint32_t)(b)->a[(b)->m - 1] : 0)
 
+#define BED_MAX_BIN 37450
+
 typedef struct {
     int m; // used-length
     int n; // alloced-length
@@ -59,6 +61,7 @@ typedef struct {
     uint32_t l_reg; // total length of these regions
     uint32_t l_chr; // length of the chromosome, used for check the positions of each region, 0 is not set
     uint64_t *a;
+    uint32_t *count; // how many regions merged in this region, for stat only
     int *idx;
     void *data; // self defined data
 } bedreglist_t;

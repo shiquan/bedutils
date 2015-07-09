@@ -74,11 +74,12 @@ static void bed_read(const char *fn, bedaux_t * reg, int right_flank, int left_f
     {
 	int32_t beg = -1, end = -1;
 	line++;
-	if (isNull(str->s)) {
+	if (isNull(str->s) || str->s[0] == '\n') {
 	    if (dret != '\n') while ((ks_getc(ks)) > 0 && dret != '\n');
 	    warnings("%s: line %d is empty! skip... ", fn, line);
 	    continue;
 	}
+	if (str->s[0] == '#') continue;
 	khiter_t k;
 	k= kh_get(reg, reghash, str->s);
 	if (k == kh_end(reghash)) {
@@ -172,6 +173,7 @@ static void clear_reg(bedreglist_t *reg, bedvoid_destroy func)
     if ( reg == NULL ) return;
     if ( reg->n == 0 ) return;
     freemem(reg->a);
+    if (reg->count) freemem(reg->count);
     freemem(reg->idx);
     func(reg->data);
 }
@@ -253,6 +255,7 @@ static bedreglist_t * reg_add(bedreglist_t **beds, int n_beds)
 	bed->m += beds[i]->m;
 	bed->l_reg += beds[i]->l_reg;
     }
+    bed->count = (uint32_t*)malloc((bed->m+1)*sizeof(uint32_t));
     return bed;
 }
 
@@ -286,6 +289,7 @@ static void regcore_merge(bedreglist_t *bed)
 	goto mark;
     }
     int i, m = 0;
+    for ( i = 0; i < bed->m; ++i) bed->count[i] = 1;
     uint32_t lastbeg = 0, lastend = 0;
     if (bed->m == 1) {
 	lastbeg = bed->a[0]>>32;
@@ -308,6 +312,7 @@ static void regcore_merge(bedreglist_t *bed)
 	}
 	if (lastend > beg) {
 	    if (lastend < end) lastend = end;
+	    bed->count[m]++;
 	} else {
 	    b[m++] = (uint64_t) lastbeg<<32 |lastend;
 	    length += lastend - lastbeg;
@@ -329,6 +334,41 @@ mark:
     bed->l_chr = 0;
 }
 
+/*
+  return :
+  0    find this pos in bed region
+  -1   in the out range of the regions
+  -2   debug
+  int  gap with the nearest block
+ */
+int pos_find(bedreglist_t *bed, uint32_t pos)
+{
+    int low = 0;
+    int high = bed->m;
+    int mid;
+    uint32_t beg = (uint32_t)(bed->a[0]>>32);
+    uint32_t end = (uint32_t)bed->a[0];
+    if (pos < beg && pos > end) return -1;
+    if (pos >= beg && pos <= end) return 0;
+    while (low < high)
+    {
+	mid = (high+low)/2;
+	beg = (uint32_t)(bed->a[mid]>>32);
+	end = (uint32_t)bed->a[mid];
+	if (pos >= beg && pos <= end) return 0;
+	if (pos < beg) high = mid -1;
+	if (pos > end) low = mid + 1;
+    }
+    if (low == high) {
+	beg = (uint32_t)(bed->a[low]>>32);
+	end = (uint32_t)bed->a[low];
+	uint32_t lastend = (uint32_t)bed->a[low-1];
+	uint32_t nextbeg = (uint32_t)(bed->a[low+1]>>32);
+	return pos < beg ? beg -pos > pos -lastend ? pos-lastend : beg-pos : pos - end > nextbeg - pos ? nextbeg - pos : pos - end;
+    }
+    return -2;
+}
+
 static bedreglist_t * reg_clone(bedreglist_t * bed)
 {
     if ( bed == NULL ) return NULL;
@@ -341,6 +381,7 @@ static bedreglist_t * reg_clone(bedreglist_t * bed)
     // index and data
     return bed1;
 }
+
 static bedreglist_t * reg_merge(bedreglist_t ** beds, int n_beds)
 {
     bedreglist_t *bed = reg_add(beds, n_beds);
@@ -534,7 +575,6 @@ static bedreglist_t * reg_diff(bedreglist_t ** regs, int n_regs)
 		lastbeg = lastend;
 		lastend =  end;
 	    } else {
-		// this condition will be not happened unless bed file is not sorted!
 		/* condition 5: 
 		 *
 		 *         lastbeg                    lastend
@@ -545,14 +585,12 @@ static bedreglist_t * reg_diff(bedreglist_t ** regs, int n_regs)
 		 *         |                |
 		 *         beg            end
 		 */
-		errabort("condition5 error: please cantact the developer when you see this message!");
 		lastbeg = end;
 	    }
 
 	    assert(lastbeg < lastend);
 	    continue;
 	}
-    
 	// lastend > beg come here
 	if (lastbeg < beg) {
 	    //b[j++] = (uint64_t) lastbeg << 32| (beg -1);
@@ -563,7 +601,7 @@ static bedreglist_t * reg_diff(bedreglist_t ** regs, int n_regs)
 		     "Contact developer if you see this message!");
 	}
     
-	/* condition 6:  Never happen
+	/* condition 6: 
 	 *
 	 *         lastbeg              lastend
 	 *         |                   |
@@ -573,12 +611,12 @@ static bedreglist_t * reg_diff(bedreglist_t ** regs, int n_regs)
 	 *                   |                |
 	 *                   beg            end
 	 */
-	/* if (lastend < end) { */
-	/*     //lastbeg = lastend + 1; */
-	/*     lastbeg = lastend; */
-	/*     lastend = end; */
-	/*     continue; */
-	/* } */
+	if (lastend < end) {
+	    //lastbeg = lastend + 1;
+	    lastbeg = lastend;
+	    lastend = end;
+	    continue;
+	}
 
 	/* condition 7: 
 	 *
@@ -605,6 +643,7 @@ static bedreglist_t * reg_diff(bedreglist_t ** regs, int n_regs)
 	     *                   beg            end
 	     */
 	    lastbeg = end;
+	    continue;
 	}
     }
 

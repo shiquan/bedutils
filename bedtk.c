@@ -1,6 +1,8 @@
 #include "bedutil.h"
 #include "commons.h"
 
+const char * version = "0.1.2";
+
 extern bedHandle_t *bedHand;
 
 static bool one_based = FALSE;
@@ -75,7 +77,7 @@ int mergeBed(int argc, char * argv[], int trim_tag)
 	    merge_regions, bed1->region, bed1->length);
     bedHand->destroy(bed1, destroy_void);
     bedHand->clear(&bed, destroy_void);
-    return 1;
+    return 0;
 }
 
 int uniqHelp()
@@ -134,7 +136,7 @@ int diffBed(int argc, char * argv[])
 	    bed1->region, bed1->length);
     bedHand->destroy( bed1, destroy_void );
     bedHand->clear( &bed, destroy_void );
-    return 1;
+    return 0;
 }
 
 
@@ -155,7 +157,7 @@ int trimBed(int argc, char *argv[])
 	    trimmed_length, bed1->region, bed1->length);
     bedHand->destroy(bed1, destroy_void);
     bedHand->clear(&bed, destroy_void);
-    return 1;
+    return 0;
 }
 
 int compHelp()
@@ -169,7 +171,7 @@ void compare_regions(bedaux_t *bed)
     if ( bed == NULL ) return;
     int i, j, l;
     regHash_t *rgh = bed->hfiles[0]->reg;
-    writeout("#chr\tstart\tend\tlength\tcovered\tcover_rate\tcover_start\tcover_end\n");
+    writeout("#chr\tstart\tend\tlength\tcovered\tcover_rate\tcover_start\tcover_end\tcount\n");
     for ( l = 0; l < bed->n_seq; ++l )
     {
 	khiter_t k;
@@ -177,20 +179,21 @@ void compare_regions(bedaux_t *bed)
 	if ( k == kh_end(rgh) ) continue;
 	bedreglist_t *reg = kh_val(rgh, k);
 	bedreglist_t *comp = (bedreglist_t*)reg->data;
-	
+
 	/* chr\tstart\tend\t\length\tcover_length\tcover_rate\tcover_start\t%cover_end */
 	if ( comp == NULL ) {
 	    for ( i = 0; i < reg->m; ++i )
 	    {
 		uint32_t start =(uint32_t)(reg->a[i] >> 32);
 		uint32_t end = (uint32_t)reg->a[i];
-		writeout("%s\t%u\t%u\t%u\t0\t0\tNA\tNA\n", bed->seq_names[l], start, end, end - start);
+		writeout("%s\t%u\t%u\t%u\t0\t0\tNA\tNA\t0\n", bed->seq_names[l], start, end, end - start);
 	    }
 	} else {
 	    i = j = 0;
 	    bool is_uncover = TRUE;
 	    while ( i < reg->m && j < comp->m )
 	    {
+		uint32_t count = comp->count[j];
 		uint32_t start =(uint32_t)(reg->a[i] >> 32);
 		uint32_t end = (uint32_t)reg->a[i];
 		uint32_t cstart =(uint32_t)(comp->a[j] >> 32);
@@ -215,7 +218,7 @@ void compare_regions(bedaux_t *bed)
 		*/
 		if ( end <= cstart ) {
 		    i++;
-		    if ( is_uncover )writeout("%s\t%u\t%u\t%u\t0\t0\tNA\tNA\n", bed->seq_names[l], start, end, end - start);
+		    if ( is_uncover )writeout("%s\t%u\t%u\t%u\t0\t0\tNA\tNA\t0\n", bed->seq_names[l], start, end, end - start);
 		    is_uncover = TRUE;
 		    continue;
 		}
@@ -238,7 +241,7 @@ void compare_regions(bedaux_t *bed)
 		    is_uncover = FALSE;
 		    uint32_t length = end - start;
 		    uint32_t cov = cstart < start ? cend - start : cend - cstart;
-		    writeout("%s\t%u\t%u\t%u\t%u\t%.6f\t%u\t%u\n", bed->seq_names[l], start, end, length, cov, (float)cov/length, cstart, cend);
+		    writeout("%s\t%u\t%u\t%u\t%u\t%.6f\t%u\t%u\t%u\n", bed->seq_names[l], start, end, length, cov, (float)cov/length, cstart, cend, count);
 		    continue;
 		}
 		/*
@@ -260,7 +263,7 @@ void compare_regions(bedaux_t *bed)
 		    is_uncover = TRUE;
 		    uint32_t length = end - start;
 		    uint32_t cov = cstart > start ? end - cstart : end - start;
-		    writeout("%s\t%u\t%u\t%u\t%u\t%.6f\t%u\t%u\n", bed->seq_names[l], start, end, length, cov, (float)cov/length, cstart, cend);
+		    writeout("%s\t%u\t%u\t%u\t%u\t%.6f\t%u\t%u\t%u\n", bed->seq_names[l], start, end, length, cov, (float)cov/length, cstart, cend, count);
 		    continue;
 		}
 		debug("Never comes here! %s\t%u\t%u\t%u\t%u\n", bed->seq_names[l], start, end, cstart, cend);
@@ -269,7 +272,7 @@ void compare_regions(bedaux_t *bed)
 	    {
 		uint32_t start =(uint32_t)(reg->a[i] >> 32);
 		uint32_t end = (uint32_t)reg->a[i];
-		if ( is_uncover ) writeout("%s\t%u\t%u\t%u\t0\t0\tNA\tNA\n", bed->seq_names[l], start, end, end - start);
+		if ( is_uncover ) writeout("%s\t%u\t%u\t%u\t0\t0\tNA\tNA\t0\n", bed->seq_names[l], start, end, end - start);
 		is_uncover = TRUE;
 		i++;
 	    }
@@ -287,6 +290,18 @@ int compBed(int argc, char *argv[])
     bedHand->clear(&bed, destroy_void);
     return 0;
 }
+
+int summaryBed(int argc, char *argv[])
+{
+    bedaux_t bed = { .is_empty = BD_IS_EMPTY, .alloced=0, .n_files = 0, NULL, NULL, NULL, 0, 0, 0 };
+    if( init_argv(argc, argv, &bed) ) return compHelp();
+    //bedaux_t *bed1 = bedHand->merge(&bed);
+    
+    //bedHand->destroy(bed1, destroy_reg);
+    bedHand->clear(&bed, destroy_void);
+    return 0;
+}
+
 int countHelp()
 {
     fprintf(stderr,"Usage: comp <in1.bed> <in2.bed>\n");
@@ -357,6 +372,7 @@ static int usage(void)
 	    "uniq     : find out the uniq regions of all the input bed files\n"
 	    "trim     : trim the input bed files with -r and -l.\n"
 	    "comp     : compare the first bed file with others\n"
+	    "sum      : summarize the chromosome length in the bed file(s).\n"
 	    "count    : count the regions \n"
 	    "=============================================================================================\n"
 	    "Usage:\n"
@@ -383,6 +399,7 @@ int main(int argc, char *argv[])
     else if (STREQ(argv[1], "trim")) return trimBed(argc-1, argv+1);
     else if (STREQ(argv[1], "comp")) return compBed(argc-1, argv+1);
     else if (STREQ(argv[1], "count")) return countBed(argc-1, argv+1);
+    else if (STREQ(argv[1], "sum")) return summaryBed(argc-1, argv+1);
     else return usage();
     return 1;
 }
