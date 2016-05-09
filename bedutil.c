@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2014, 2015 Beijing Genomics Institution (BGI)
+//  Copyright (c) 2014, 2015, 2016 Beijing Genomics Institution (BGI)
 //  shiquan@genomics.cn
 //
 

@@ -2,6 +2,7 @@
 //  bedutil.h
 //
 // Copyright (c) 2014, 2015 Beijing Genomics Institution (BGI)
+//               2016       Shi Quan (shiquan@genomics.cn)
 //
 //  Author:      Shi Quan (shiquan@genomics.cn)
 //
@@ -26,6 +27,10 @@
 //
 // This program is designed to handle bed file, inspired by liheng's bedidx.c
 //
+// TODO:
+//      1. check the memory befor merge large regions
+//      2. accept 3+ columns, support merge based on genes
+
 #ifndef BEDUTILS_H
 #define BEDUTILS_H
 #include <stdint.h>
@@ -104,6 +109,10 @@ struct _bedHandle {
     bedaux_t *(*diff)(bedaux_t *bed);
     bedaux_t *(*comp)(bedaux_t *bed);
     bedaux_t *(*count)(bedaux_t *bed);
+    bedaux_t *(*find)(bedaux_t *bed);
+    /* summary the regions */
+    void (*summary)(const char *fn, bedaux_t *bed);
+    /* save the regions into a file */
     void (*save)(const char *fn, bedaux_t *bed);
     /* destroy */
     void (*destroy)(bedaux_t *bed, bedvoid_destroy func);
