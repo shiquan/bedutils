@@ -7,6 +7,7 @@
 #include "bedutil.h"
 #include "ksort.h"
 #include "kseq.h"
+#include "kstring.h"
 
 KSORT_INIT_GENERIC(uint64_t)
 
@@ -43,14 +44,13 @@ static void bed_read(const char *fn, bedaux_t * reg, int right_flank, int left_f
     assert ( right_flank >= 0 && left_flank >=0 );
     assert ( reg->alloced >= reg->n_files );
     if ( reg->alloced == reg->n_files ) {
-	reg->alloced = reg->alloced == 0 ? 2 : reg->alloced + 2;
+	reg->alloced = reg->alloced == 0 ? 2 : reg->alloced + 10;
 	reg->filenames = (char**)realloc(reg->filenames, reg->alloced*sizeof(char*));
 	reg->hfiles = (bedfile_t**)realloc(reg->hfiles, reg->alloced*sizeof(bedfile_t*));
     }
     int nfile = reg->n_files;
     int i;
-    for (i = 0; nfile > 0 && i < nfile; i++)
-    {
+    for (i = 0; nfile > 0 && i < nfile; i++) {
 	if ( reg->filenames[i] && !strcmp(fn, reg->filenames[i]) ) {
 	    warnings("File %s load more than once. Skip...", fn);
 	    return;
@@ -70,51 +70,59 @@ static void bed_read(const char *fn, bedaux_t * reg, int right_flank, int left_f
     str = (kstring_t*)needmem(sizeof(kstring_t));
     ks = ks_init(fp);
     int line = 0;
-    while (ks_getuntil(ks, 0, str, &dret) >= 0)
-    {
+    while (ks_getuntil(ks, 2, str, &dret) >= 0) {
 	int32_t beg = -1, end = -1;
 	line++;
 	if (isNull(str->s) || str->s[0] == '\n') {
-	    if (dret != '\n') while ((ks_getc(ks)) > 0 && dret != '\n');
+	    //if (dret != '\n') while ((ks_getc(ks)) > 0 && dret != '\n');
 	    warnings("%s: line %d is empty! skip... ", fn, line);
 	    continue;
 	}
-	if (str->s[0] == '#') continue;
+
+	if (str->s[0] == '#') {
+	    //while (dret != '\n' && ks_getuntil(ks, 0, str, &dret) > 0);
+	    continue;
+	}
+	int nfields = 0;
+	int *splits = ksplit(str, 0, &nfields);
+	if (splits == NULL)
+	    continue;
+
+	if (nfields < 2) {
+	    free(splits);
+	    continue;
+	}
+	char *name = str->s + splits[0];
+	char *tmp = str->s + splits[1];
+	if (isdigit(tmp[0]))
+	    beg = atoi(str->s + splits[1]);
+	if (beg == -1) {
+	    warnings("%s: line %d is malformed! skip... ", fn, line);
+	    continue;
+	}
+	if (nfields > 2) {
+	    end = atoi(str->s + splits[2]);
+	}
+	free(splits);
 	khiter_t k;
-	k= kh_get(reg, reghash, str->s);
+	k= kh_get(reg, reghash, name);
 	if (k == kh_end(reghash)) {
 	    int ret;
 	    reglist_t *b;
 	    b = (reglist_t*)needmem(sizeof(reglist_t));
 	    b->sorted = BD_IS_UNSORT;
-	    b->id = get_id(reg, str->s);
+	    b->id = get_id(reg, name);
 	    if (b->id == -1 ) {
 		b->id = reg->n_seq;
 		reg->n_seq++;
 		reg->seq_names = (char**)realloc(reg->seq_names, reg->n_seq*sizeof(char*));
-		reg->seq_names[b->id] = strdup(str->s);
+		reg->seq_names[b->id] = strdup(name);
 	    }
 	    k = kh_put(reg, reghash, reg->seq_names[b->id], &ret);
 	    kh_val(reghash, k) = b;      
 	}
 	reglist_t *p = kh_val(reghash, k);
-	if (dret != '\n') {
-	    if (ks_getuntil(ks, 0, str, &dret) > 0 && isdigit(str->s[0])) {
-		beg = atoi(str->s);
-		if (dret != '\n') {
-		    if (ks_getuntil(ks, 0, str, &dret) > 0 && isdigit(str->s[0])) {
-			end = atoi(str->s);	  
-			while (dret != '\n' && ks_getuntil(ks, 0, str, &dret) > 0); // skip all other parts
-		    }
-		} // treat two colunms tsv format as 1based
-	    }
-	}
-	if (beg == -1) {
-	    warnings("%s: line %d is malformed! skip... ", fn, line);
-	    continue;
-	}
 	if (beg == end) *is_error = 1;
-    
 	if (end == -1) { // treat as tsv file 
 	    // this is different from bed_read in bedidx.c
 	    end = beg;
@@ -146,8 +154,7 @@ static void bed_read(const char *fn, bedaux_t * reg, int right_flank, int left_f
     bed->length = 0;
     khiter_t k;
     uint32_t regions = 0;
-    for ( k = 0; k < kh_end(bed->reg); ++k )
-    {
+    for ( k = 0; k < kh_end(bed->reg); ++k ) {
 	if (kh_exist(bed->reg, k)) {
 	    regions += kh_val(bed->reg, k)->m;
 	}
@@ -166,7 +173,6 @@ static void bed_read(const char *fn, bedaux_t * reg, int right_flank, int left_f
     gzclose(fp);
     freemem(str->s); freemem(str);
 }
-
 
 static void clear_reg(reglist_t *reg, bedvoid_destroy func)
 {
@@ -289,7 +295,8 @@ static void regcore_merge(reglist_t *bed)
 	goto mark;
     }
     int i, m = 0;
-    for ( i = 0; i < bed->m; ++i) bed->count[i] = 1;
+    for ( i = 0; i < bed->m; ++i)
+	bed->count[i] = 1;
     uint32_t lastbeg = 0, lastend = 0;
     if (bed->m == 1) {
 	lastbeg = bed->a[0]>>32;
@@ -301,8 +308,7 @@ static void regcore_merge(reglist_t *bed)
     uint64_t *b;
     b = (uint64_t*) needmem((bed->m+1) * sizeof(uint64_t));
 
-    for (i = 0; i < bed->m; ++i)
-    {
+    for (i = 0; i < bed->m; ++i) {
 	uint32_t beg, end;
 	beg = bed->a[i]>>32; end = (uint32_t)bed->a[i];
 	if (lastend < 1) {
@@ -422,8 +428,7 @@ static reglist_t * reg_uniq(reglist_t ** regs, int n_bed )
 	b = (uint64_t*)needmem((bed->m+1) * sizeof(uint64_t));
 	int j = 0;
 	uint32_t length = 0;
-	for (i = 0; i < bed->m; ++i)
-	{
+	for (i = 0; i < bed->m; ++i) {
 	    int beg, end;
 	    beg = bed->a[i]>>32; end = (uint32_t)bed->a[i];
 
@@ -666,11 +671,11 @@ static reglist_t * reg_comp(reglist_t **regs, int n_regs)
 	regcore_merge(bed);
 	return bed;	
     }
-    reglist_t *main = reg_merge( regs, 1);
-    if ( main == NULL ) return NULL;
+    reglist_t *m = reg_merge( regs, 1);
+    if ( m == NULL ) return NULL;
     reglist_t *mrgs = reg_merge( regs+1, n_regs -1 );
-    main->data = (void*)mrgs;
-    return main;
+    m->data = (void*)mrgs;
+    return m;
 }
 
 struct cut_pos {
@@ -834,7 +839,9 @@ static bedaux_t * bed_handle(bedaux_t *beds, handle_func func, int *check_error)
 	kh_val(beda->hfiles[0]->reg, k) = bed1;
 	beda->is_empty = BD_IS_HAVE;
     }
+
     return beda;
+    
 }
 
 

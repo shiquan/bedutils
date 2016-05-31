@@ -58,8 +58,7 @@
 #define BED_MAX_BIN 37450
 
 typedef struct {
-    int m; // used-length
-    int n; // alloced-length
+    int m,n;
     int flag;
     int sorted; // sorted flag, check this flag before sort
     int id; // name id
@@ -109,9 +108,9 @@ struct _bedHandle {
     bedaux_t *(*diff)(bedaux_t *bed);
     bedaux_t *(*comp)(bedaux_t *bed);
     bedaux_t *(*count)(bedaux_t *bed);
-    bedaux_t *(*find)(bedaux_t *bed);
+    //bedaux_t *(*find)(bedaux_t *bed);
     /* summary the regions */
-    void (*summary)(const char *fn, bedaux_t *bed);
+    //void (*summary)(const char *fn, bedaux_t *bed);
     /* save the regions into a file */
     void (*save)(const char *fn, bedaux_t *bed);
     /* destroy */

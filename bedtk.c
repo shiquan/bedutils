@@ -18,33 +18,29 @@ int init_argv(int argc, char **argv, bedaux_t *bed)
     int n, i;
     while ((n = getopt(argc, argv, "o:hr:l:1")) >= 0)
     {
-	switch(n)
-	{
-	case 'o': out = optarg; break;
-	case 'h': help = 1; break;
-	case 'r': flank_right = atoi(optarg); break;
-	case 'l': flank_left = atoi(optarg); break;
-	case '1': one_based = TRUE; break;
-	default: errabort("invaild option -- %c", n);
+	switch(n) {	
+	    case 'o': out = optarg; break;
+	    case 'h': help = 1; break;
+	    case 'r': flank_right = atoi(optarg); break;
+	    case 'l': flank_left = atoi(optarg); break;
+	    case '1': one_based = TRUE; break;
+	    default: errabort("invaild option -- %c", n);
 	}
     }
     if ( help ) return help;
     n = argc - optind;
     if (n == 0) return 1;
     int ret = 0;
-    for (i = 0; i < n; ++i)
-    {
+    for (i = 0; i < n; ++i) {
 	if ( one_based ) flank_left += 1;
 	bedHand->read(argv[optind+i], bed, flank_right, flank_left, &ret, trim_tag);
     }
-    if (!one_based && ret)
-    {
+    if (!one_based && ret) {
 	warnings("This file might be not a standard bed format."
 		 "Please use parameter \"-1\" if the start in the region file is 1-based!");
     }
     return 0;
 }
-
 
 int mergeHelp(int tag)
 {
@@ -162,10 +158,10 @@ int trimBed(int argc, char *argv[])
 
 int compHelp()
 {
-    fprintf(stderr,"Usage: comp <in1.bed> <in2.bed>\n"
-	);
+    fprintf(stderr,"Usage: comp <in1.bed> <in2.bed>\n");
     return 1;
 }
+
 void compare_regions(bedaux_t *bed)
 {
     if ( bed == NULL ) return;
@@ -291,18 +287,84 @@ int compBed(int argc, char *argv[])
     return 0;
 }
 
+int summaryHelp()
+{
+    fprintf(stderr,"Usage: sum <in.bed>\n");
+    return 1;
+}
+
 int summaryBed(int argc, char *argv[])
 {
+    int i;
     bedaux_t bed = INIT_BED_EMPTY;
     int check = BD_CHECK_NO;
-    if( init_argv(argc, argv, &bed) ) return compHelp();
+    if (init_argv(argc, argv, &bed)) return summaryHelp();
+
     bedaux_t *bed1 = bedHand->merge(&bed, &check);
-    
-    //bedHand->destroy(bed1, destroy_reg);
+    if (bed.n_files > 1) {
+	warnings("only summary the first file: %d\n", bed.n_files);
+    }
+    bedfile_t *b = bed1->hfiles[0];
+    regHash_t *rh = b->reg;
+    writeout("#chr\tcount\tlength\tpercent\n");
+    for (i=0; i<bed1->n_seq; ++i) {
+	khiter_t k;
+	k = kh_get(reg, rh, bed1->seq_names[i]);
+	if (k == kh_end(rh))
+	    continue;
+	reglist_t *r = kh_val(rh, k);
+	if (r) {
+	    writeout("%s\t%u\t%u\t%.4f\n", bed1->seq_names[i], r->m, r->l_reg, (float)r->l_reg/bed1->length);
+	}
+    }
+
+    bedHand->destroy(bed1, destroy_reg);
     bedHand->clear(&bed, destroy_void);
     return 0;
 }
 
+int lengthHelp()
+{
+    fprintf(stderr,"Usage: sum <in.bed>\n");
+    return 1;
+}
+
+int lengthBed(int argc, char *argv[])
+{
+    int i,j;
+    bedaux_t bed = INIT_BED_EMPTY;
+    int check = BD_CHECK_NO;
+    if (init_argv(argc, argv, &bed)) return lengthHelp();
+
+    bedaux_t *bed1 = bedHand->merge(&bed, &check);
+
+    bedfile_t *b = bed1->hfiles[0];
+    regHash_t *rh = b->reg;
+    writeout("#chr\tstart\tend\tlength\tpchr\tgap_length\n");
+    for (i=0; i<bed1->n_seq; ++i) {
+	khiter_t k;
+	k = kh_get(reg, rh, bed1->seq_names[i]);
+	if (k == kh_end(rh))
+	    continue;
+	reglist_t *r = kh_val(rh, k);
+	if (r) {
+	    uint32_t lastend = 0;
+	    for (j=0; j<r->m; ++j) {
+		uint32_t begin = (uint32_t)(r->a[j]>>32);
+		uint32_t end = (uint32_t)(r->a[j]);
+		uint32_t gap = lastend == 0 ? 0 : begin - lastend;
+		lastend = end;
+		uint32_t length = end - begin;
+		writeout("%s\t%u\t%u\t%u\t%.4f\t%u\n", bed1->seq_names[i], begin, end, length, (float)length/r->l_reg, gap);
+	    }
+	}
+    }
+
+    bedHand->destroy(bed1, destroy_reg);
+    bedHand->clear(&bed, destroy_void);
+    return 0;
+    
+}
 int countHelp()
 {
     fprintf(stderr,"Usage: count <in1.bed> <in2.bed>\n");
@@ -401,6 +463,7 @@ int main(int argc, char *argv[])
     else if (STREQ(argv[1], "comp")) return compBed(argc-1, argv+1);
     else if (STREQ(argv[1], "count")) return countBed(argc-1, argv+1);
     else if (STREQ(argv[1], "sum")) return summaryBed(argc-1, argv+1);
+    else if (STREQ(argv[1], "length")) return lengthBed(argc-1, argv+1);
     else return usage();
     return 1;
 }
