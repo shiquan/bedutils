@@ -69,11 +69,11 @@ typedef struct {
     uint32_t *count; // how many regions merged in this region, for stat only
     int *idx;
     void *data; // self defined data
-} bedreglist_t;
+} reglist_t;
 
-typedef bedreglist_t * bedreglist_p;
+typedef reglist_t * reglist_p;
 
-KHASH_MAP_INIT_STR(reg, bedreglist_p)
+KHASH_MAP_INIT_STR(reg, reglist_p)
 
 typedef kh_reg_t regHash_t;
 

@@ -177,8 +177,8 @@ void compare_regions(bedaux_t *bed)
 	khiter_t k;
 	k = kh_get(reg, rgh, bed->seq_names[l]);
 	if ( k == kh_end(rgh) ) continue;
-	bedreglist_t *reg = kh_val(rgh, k);
-	bedreglist_t *comp = (bedreglist_t*)reg->data;
+	reglist_t *reg = kh_val(rgh, k);
+	reglist_t *comp = (reglist_t*)reg->data;
 
 	/* chr\tstart\tend\t\length\tcover_length\tcover_rate\tcover_start\t%cover_end */
 	if ( comp == NULL ) {
@@ -294,8 +294,9 @@ int compBed(int argc, char *argv[])
 int summaryBed(int argc, char *argv[])
 {
     bedaux_t bed = INIT_BED_EMPTY;
+    int check = BD_CHECK_NO;
     if( init_argv(argc, argv, &bed) ) return compHelp();
-    //bedaux_t *bed1 = bedHand->merge(&bed);
+    bedaux_t *bed1 = bedHand->merge(&bed, &check);
     
     //bedHand->destroy(bed1, destroy_reg);
     bedHand->clear(&bed, destroy_void);
@@ -319,7 +320,7 @@ void count_regions(bedaux_t *bed)
 	khiter_t k;
 	k = kh_get(reg, rgh, bed->seq_names[l]);
 	if ( k == kh_end(rgh) ) continue;
-	bedreglist_t *reg = kh_val(rgh, k);
+	reglist_t *reg = kh_val(rgh, k);
 	uint32_t lastbeg, lastend = 0;
 	uint32_t count = 0;
 	for ( i= 0; i < reg->m; ++i)

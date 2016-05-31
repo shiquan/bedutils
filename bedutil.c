@@ -15,7 +15,7 @@ KSTREAM_INIT(gzFile, gzread, 8192)
 #define LIDX_SHIFT 13
 #define swapvalue(a, b, t) {t c = a; a = b; b = c;}
 
-static void reg_sort(bedreglist_t *reg)
+static void reg_sort(reglist_t *reg)
 {
     if (reg->flag & BD_IS_SORTED) {
 	debug("Already sorted!");
@@ -84,8 +84,8 @@ static void bed_read(const char *fn, bedaux_t * reg, int right_flank, int left_f
 	k= kh_get(reg, reghash, str->s);
 	if (k == kh_end(reghash)) {
 	    int ret;
-	    bedreglist_t *b;
-	    b = (bedreglist_t*)needmem(sizeof(bedreglist_t));
+	    reglist_t *b;
+	    b = (reglist_t*)needmem(sizeof(reglist_t));
 	    b->sorted = BD_IS_UNSORT;
 	    b->id = get_id(reg, str->s);
 	    if (b->id == -1 ) {
@@ -97,7 +97,7 @@ static void bed_read(const char *fn, bedaux_t * reg, int right_flank, int left_f
 	    k = kh_put(reg, reghash, reg->seq_names[b->id], &ret);
 	    kh_val(reghash, k) = b;      
 	}
-	bedreglist_t *p = kh_val(reghash, k);
+	reglist_t *p = kh_val(reghash, k);
 	if (dret != '\n') {
 	    if (ks_getuntil(ks, 0, str, &dret) > 0 && isdigit(str->s[0])) {
 		beg = atoi(str->s);
@@ -168,7 +168,7 @@ static void bed_read(const char *fn, bedaux_t * reg, int right_flank, int left_f
 }
 
 
-static void clear_reg(bedreglist_t *reg, bedvoid_destroy func)
+static void clear_reg(reglist_t *reg, bedvoid_destroy func)
 {
     if ( reg == NULL ) return;
     if ( reg->n == 0 ) return;
@@ -190,7 +190,7 @@ static void bed_clear(bedaux_t * reg, bedvoid_destroy func)
 	    regHash_t *rgh = reg->hfiles[j]->reg;
 	    k = kh_get(reg, rgh, reg->seq_names[i]);
 	    if ( k != kh_end(rgh) ) {
-		bedreglist_t *bed = kh_val(rgh, k);
+		reglist_t *bed = kh_val(rgh, k);
 		clear_reg(bed, func);
 		freemem(bed);
 		kh_del(reg, rgh, k);
@@ -218,7 +218,7 @@ static void bed_destroy(bedaux_t * reg, bedvoid_destroy func)
 
 void destroy_reg(void *data)
 {
-    bedreglist_t *bed = (bedreglist_t*)data;
+    reglist_t *bed = (reglist_t*)data;
     clear_reg(bed, destroy_void);
     freemem(bed);
 }
@@ -228,10 +228,10 @@ void destroy_void(void *data)
     return;
 }
 
-static bedreglist_t * reg_add(bedreglist_t **beds, int n_beds)
+static reglist_t * reg_add(reglist_t **beds, int n_beds)
 {
     int i = 0;
-    bedreglist_t * bed = (bedreglist_t*)calloc(1,sizeof(bedreglist_t));
+    reglist_t * bed = (reglist_t*)calloc(1,sizeof(reglist_t));
     while(beds[i] == NULL) { i++; }
     if ( i == n_beds ) {
 	freemem(bed);
@@ -259,7 +259,7 @@ static bedreglist_t * reg_add(bedreglist_t **beds, int n_beds)
     return bed;
 }
 
-static int check_reg_by_chromosome_length(bedreglist_t * bed)
+static int check_reg_by_chromosome_length(reglist_t * bed)
 {
     if ( bed == NULL ) return -1;
     if ( bed->sorted == BD_IS_UNSORT ) return -2;
@@ -277,7 +277,7 @@ static int check_reg_by_chromosome_length(bedreglist_t * bed)
     return 1;
 }
 
-static void regcore_merge(bedreglist_t *bed) 
+static void regcore_merge(reglist_t *bed) 
 {
     if ( bed == NULL ) return;
     if ( bed->sorted & BD_IS_MERGED ) {
@@ -341,7 +341,7 @@ mark:
   -2   debug
   int  gap with the nearest block
  */
-int pos_find(bedreglist_t *bed, uint32_t pos)
+int pos_find(reglist_t *bed, uint32_t pos)
 {
     int low = 0;
     int high = bed->m;
@@ -369,11 +369,11 @@ int pos_find(bedreglist_t *bed, uint32_t pos)
     return -2;
 }
 
-static bedreglist_t * reg_clone(bedreglist_t * bed)
+static reglist_t * reg_clone(reglist_t * bed)
 {
     if ( bed == NULL ) return NULL;
-    bedreglist_t *bed1 = (bedreglist_t*)calloc(1, sizeof(bedreglist_t));
-    memcpy(bed1, bed, sizeof(bedreglist_t));
+    reglist_t *bed1 = (reglist_t*)calloc(1, sizeof(reglist_t));
+    memcpy(bed1, bed, sizeof(reglist_t));
     if ( bed->n ) {
 	bed1->a = (uint64_t*)calloc(bed->n, sizeof(uint64_t));
 	memcpy(bed1->a, bed->a, bed->n *sizeof(uint64_t));
@@ -382,18 +382,18 @@ static bedreglist_t * reg_clone(bedreglist_t * bed)
     return bed1;
 }
 
-static bedreglist_t * reg_merge(bedreglist_t ** beds, int n_beds)
+static reglist_t * reg_merge(reglist_t ** beds, int n_beds)
 {
-    bedreglist_t *bed = reg_add(beds, n_beds);
+    reglist_t *bed = reg_add(beds, n_beds);
     regcore_merge(bed);
     return bed;
 }
 
-static bedreglist_t * reg_uniq(bedreglist_t ** regs, int n_bed ) 
+static reglist_t * reg_uniq(reglist_t ** regs, int n_bed ) 
 {
     int i, l;
     if ( n_bed < 2 ) return NULL;
-    bedreglist_t * bed = NULL;
+    reglist_t * bed = NULL;
     int id = -1;
     for ( l = 0; l < n_bed; ++l )
     {
@@ -404,8 +404,8 @@ static bedreglist_t * reg_uniq(bedreglist_t ** regs, int n_bed )
 	if ( id  == -1 ) id = regs[l]->id;
 	else if (id != regs[l]->id ) errabort("[%s]: bed->id != regs[i]->id", __func__, l);
 	if ( !(regs[l]->sorted & BD_IS_MERGED) ) regcore_merge(regs[l]);
-	bedreglist_t * a[] = { bed, regs[l] };
-	bedreglist_t * newbed = reg_add(a, 2);
+	reglist_t * a[] = { bed, regs[l] };
+	reglist_t * newbed = reg_add(a, 2);
 	if ( bed ) {
 	    clear_reg(bed, destroy_void);
 	    //freemem(bed);
@@ -487,21 +487,21 @@ static bedreglist_t * reg_uniq(bedreglist_t ** regs, int n_bed )
     return bed;
 }
 
-static bedreglist_t * reg_diff(bedreglist_t ** regs, int n_regs)
+static reglist_t * reg_diff(reglist_t ** regs, int n_regs)
 {
     int i, j = 0;
     assert ( n_regs > 0 );
     if ( n_regs ==  1 ) {
-	bedreglist_t *bed = reg_clone(regs[0]);
+	reglist_t *bed = reg_clone(regs[0]);
 	regcore_merge(bed);
 	return bed;
     }
-    bedreglist_t * mrgs = reg_merge( regs+1, n_regs -1 );
-    bedreglist_t * tmp[] = { regs[0], mrgs };
-    bedreglist_t * uniq = reg_uniq(tmp, 2);
+    reglist_t * mrgs = reg_merge( regs+1, n_regs -1 );
+    reglist_t * tmp[] = { regs[0], mrgs };
+    reglist_t * uniq = reg_uniq(tmp, 2);
     //regcore_merge(uniq);
-    bedreglist_t * tmp1[] = { regs[0], uniq };
-    bedreglist_t * reg = reg_add(tmp1, 2);
+    reglist_t * tmp1[] = { regs[0], uniq };
+    reglist_t * reg = reg_add(tmp1, 2);
     clear_reg(mrgs, destroy_void);
     clear_reg(uniq, destroy_void);
     reg_sort(reg);
@@ -659,16 +659,16 @@ static bedreglist_t * reg_diff(bedreglist_t ** regs, int n_regs)
     return reg;
 }
 
-static bedreglist_t * reg_comp(bedreglist_t **regs, int n_regs)
+static reglist_t * reg_comp(reglist_t **regs, int n_regs)
 {
     if ( n_regs == 1 ) {
-	bedreglist_t *bed = reg_clone(regs[0]);
+	reglist_t *bed = reg_clone(regs[0]);
 	regcore_merge(bed);
 	return bed;	
     }
-    bedreglist_t *main = reg_merge( regs, 1);
+    reglist_t *main = reg_merge( regs, 1);
     if ( main == NULL ) return NULL;
-    bedreglist_t *mrgs = reg_merge( regs+1, n_regs -1 );
+    reglist_t *mrgs = reg_merge( regs+1, n_regs -1 );
     main->data = (void*)mrgs;
     return main;
 }
@@ -678,9 +678,9 @@ struct cut_pos {
     struct cut_pos *next;
 };
     
-static bedreglist_t *reg_split(bedreglist_t **reg, int n_regs)
+static reglist_t *reg_split(reglist_t **reg, int n_regs)
 {
-    bedreglist_t *rb = reg_add(reg, n_regs);
+    reglist_t *rb = reg_add(reg, n_regs);
     reg_sort(rb);
     uint64_t *b;
     int n = rb->n > 0 ? rb->n : 2;
@@ -782,7 +782,7 @@ static bedreglist_t *reg_split(bedreglist_t **reg, int n_regs)
     return rb;
 }
 
-typedef bedreglist_t * (*handle_func)(bedreglist_t ** regs, int n_regs);
+typedef reglist_t * (*handle_func)(reglist_t ** regs, int n_regs);
 
 static bedaux_t * bed_handle(bedaux_t *beds, handle_func func, int *check_error)
 {
@@ -802,7 +802,7 @@ static bedaux_t * bed_handle(bedaux_t *beds, handle_func func, int *check_error)
     //int skip_tag;
     for ( i = 0; i < beds->n_seq; ++i )
     {
-	bedreglist_t *regs[beds->n_files];
+	reglist_t *regs[beds->n_files];
 	beda->seq_names[i] = strdup(beds->seq_names[i]);
 	int m = 0, n = 0;
 	for ( j = 0; j < beds->n_files; ++j )
@@ -823,7 +823,7 @@ static bedaux_t * bed_handle(bedaux_t *beds, handle_func func, int *check_error)
 	    }
 	}
 	if ( m == 0 ) continue;
-	bedreglist_t * bed1 = func(regs, n);
+	reglist_t * bed1 = func(regs, n);
 	if ( bed1 == NULL ) continue;
 	beda->region += bed1->m;
 	beda->length += bed1->l_reg;
@@ -876,7 +876,7 @@ static void bed_save(const char *fn, bedaux_t * bed)
     {
 	k = kh_get(reg, beds->reg, bed->seq_names[i]);
 	if ( k != kh_end(beds->reg)) {
-	    bedreglist_t *reg = kh_val(beds->reg, k);
+	    reglist_t *reg = kh_val(beds->reg, k);
 	    if ( reg == NULL ) continue;
 	    for (j = 0; j < reg->m; ++j)
 	    {
