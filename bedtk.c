@@ -64,7 +64,7 @@ int mergeHelp(int tag)
 
 int mergeBed(int argc, char * argv[], int trim_tag) 
 {
-    bedaux_t bed = { .is_empty = BD_IS_EMPTY, .alloced=0, .n_files = 0, NULL, NULL, NULL, 0, 0, 0 };
+    bedaux_t bed = INIT_BED_EMPTY; 
     if( init_argv(argc, argv, &bed) ) return mergeHelp(trim_tag);
     int check = BD_CHECK_NO;
     bedaux_t * bed1 = bedHand->merge(&bed, &check);
@@ -92,7 +92,7 @@ int uniqHelp()
 int uniqBed(int argc, char * argv[])
 {
     trim_tag = BD_IS_FLANK;
-    bedaux_t bed = { .is_empty = BD_IS_EMPTY, .alloced=0, .n_files = 0, NULL, NULL, NULL, 0, 0, 0 };
+    bedaux_t bed = INIT_BED_EMPTY;
     if( init_argv(argc, argv, &bed) ) return uniqHelp();
     if ( bed.n_files < 2 )
     {
@@ -122,7 +122,7 @@ int diffHelp()
 int diffBed(int argc, char * argv[]) 
 {
     trim_tag = BD_IS_FLANK;
-    bedaux_t bed = { .is_empty = BD_IS_EMPTY, .alloced=0, .n_files = 0, NULL, NULL, NULL, 0, 0, 0 };
+    bedaux_t bed = INIT_BED_EMPTY;
     if( init_argv(argc, argv, &bed) ) return uniqHelp();
     if ( bed.n_files < 2 )
     {
@@ -143,7 +143,7 @@ int diffBed(int argc, char * argv[])
 int trimBed(int argc, char *argv[])
 {
     trim_tag = BD_IS_TRIM;
-    bedaux_t bed = { .is_empty = BD_IS_EMPTY, .alloced=0, .n_files = 0, NULL, NULL, NULL, 0, 0, 0 };
+    bedaux_t bed = INIT_BED_EMPTY;
     if( init_argv(argc, argv, &bed) ) return mergeHelp(trim_tag);
     int check = BD_CHECK_NO;
     bedaux_t * bed1 = bedHand->merge(&bed, &check);
@@ -282,7 +282,7 @@ void compare_regions(bedaux_t *bed)
 int compBed(int argc, char *argv[])
 {
     trim_tag = BD_IS_FLANK;
-    bedaux_t bed = { .is_empty = BD_IS_EMPTY, .alloced=0, .n_files = 0, NULL, NULL, NULL, 0, 0, 0 };
+    bedaux_t bed = INIT_BED_EMPTY;
     if( init_argv(argc, argv, &bed) ) return compHelp();
     bedaux_t * bed1 = bedHand->comp(&bed);
     compare_regions(bed1);
@@ -293,7 +293,7 @@ int compBed(int argc, char *argv[])
 
 int summaryBed(int argc, char *argv[])
 {
-    bedaux_t bed = { .is_empty = BD_IS_EMPTY, .alloced=0, .n_files = 0, NULL, NULL, NULL, 0, 0, 0 };
+    bedaux_t bed = INIT_BED_EMPTY;
     if( init_argv(argc, argv, &bed) ) return compHelp();
     //bedaux_t *bed1 = bedHand->merge(&bed);
     
@@ -304,7 +304,7 @@ int summaryBed(int argc, char *argv[])
 
 int countHelp()
 {
-    fprintf(stderr,"Usage: comp <in1.bed> <in2.bed>\n");
+    fprintf(stderr,"Usage: count <in1.bed> <in2.bed>\n");
     return 1;
 }
 
@@ -354,7 +354,7 @@ void count_regions(bedaux_t *bed)
 int countBed(int argc, char *argv[])
 {
     trim_tag = BD_IS_FLANK;
-    bedaux_t bed = { .is_empty = BD_IS_EMPTY, .alloced=0, .n_files = 0, NULL, NULL, NULL, 0, 0, 0 };
+    bedaux_t bed = INIT_BED_EMPTY;
     if( init_argv(argc, argv, &bed) ) return countHelp();
     bedaux_t * bed1 = bedHand->count(&bed);
     count_regions(bed1);

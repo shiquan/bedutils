@@ -121,4 +121,6 @@ struct _bedHandle {
 
 typedef struct _bedHandle bedHandle_t;
 
+#define INIT_BED_EMPTY  { .is_empty = BD_IS_EMPTY, .alloced=0, .n_files = 0, NULL, NULL, NULL, 0, 0, 0 }
+
 #endif
