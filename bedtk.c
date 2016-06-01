@@ -436,6 +436,7 @@ static int usage(void)
 	    "trim     : trim the input bed files with -r and -l.\n"
 	    "comp     : compare the first bed file with others\n"
 	    "sum      : summarize the chromosome length in the bed file(s).\n"
+	    "length   : summarize the length of each region in the bed file(s).\n"
 	    "count    : count the regions \n"
 	    "=============================================================================================\n"
 	    "Usage:\n"
