@@ -316,7 +316,7 @@ static void regcore_merge(reglist_t *bed)
 	    lastbeg = beg;
 	    continue;
 	}
-	if (lastend > beg) {
+	if (lastend >= beg) {
 	    if (lastend < end) lastend = end;
 	    bed->count[m]++;
 	} else {
