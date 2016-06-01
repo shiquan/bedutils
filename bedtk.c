@@ -445,14 +445,14 @@ static int usage(void)
 	    "  uniq  -o <FILE> <in1.bed> <in2.bed> [in3.bed ...]\n"
 	    "  trim  -l xx -r xx <in1.bed> [in3.bed ...]\n"
 	    "  comp  <in.bed> <in2.bed> \n"
-	    "  sum   <in.bed\n"
+	    "  sum   <in.bed>\n"
 	    "  length <in.bed>\n"
 	    "  count  <in.bed> <in2.bed> \n"
 	    "=============================================================================================\n"
 	    "Version : %s\n"
 	    "Author: Shi Quan (shiquan@genomics.cn)\n"
 	    "Website:\n"
-	    "https://github.com/shiquan/bamdst\n"
+	    "https://github.com/shiquan/bedutils\n"
 	    , version);
     return 1;
 }
