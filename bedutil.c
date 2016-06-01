@@ -18,6 +18,10 @@ KSTREAM_INIT(gzFile, gzread, 8192)
 
 static void reg_sort(reglist_t *reg)
 {
+#ifdef _DEBUG_MODE
+    debug("[%s]", __func__);
+#endif
+    
     if (reg->flag & BD_IS_SORTED) {
 	debug("Already sorted!");
 	return;
@@ -41,6 +45,10 @@ static int get_id(bedaux_t *reg, char *s)
  */
 static void bed_read(const char *fn, bedaux_t * reg, int right_flank, int left_flank, int *is_error, int trim_tag) 
 {
+#ifdef _DEBUG_MODE
+    debug("[%s] %s", __func__,fn);
+#endif
+
     assert ( right_flank >= 0 && left_flank >=0 );
     assert ( reg->alloced >= reg->n_files );
     if ( reg->alloced == reg->n_files ) {
@@ -176,6 +184,10 @@ static void bed_read(const char *fn, bedaux_t * reg, int right_flank, int left_f
 
 static void clear_reg(reglist_t *reg, bedvoid_destroy func)
 {
+#ifdef _DEBUG_MODE
+    debug("[%s]", __func__);
+#endif
+
     if ( reg == NULL ) return;
     if ( reg->n == 0 ) return;
     freemem(reg->a);
@@ -186,6 +198,10 @@ static void clear_reg(reglist_t *reg, bedvoid_destroy func)
 
 static void bed_clear(bedaux_t * reg, bedvoid_destroy func) 
 {
+#ifdef _DEBUG_MODE
+    debug("[%s]", __func__);
+#endif
+
     int i, j;
     khiter_t k;
     for ( i = 0; i < reg->n_seq; ++i ) 
@@ -218,13 +234,22 @@ static void bed_clear(bedaux_t * reg, bedvoid_destroy func)
 }
 static void bed_destroy(bedaux_t * reg, bedvoid_destroy func)
 {
+#ifdef _DEBUG_MODE
+    debug("[%s]", __func__);
+#endif
+
     bed_clear(reg, func);
     freemem(reg);
 }
 
 void destroy_reg(void *data)
 {
+#ifdef _DEBUG_MODE
+    debug("[%s]", __func__);
+#endif
+    
     reglist_t *bed = (reglist_t*)data;
+    if (bed==NULL) return;
     clear_reg(bed, destroy_void);
     freemem(bed);
 }
@@ -236,30 +261,45 @@ void destroy_void(void *data)
 
 static reglist_t * reg_add(reglist_t **beds, int n_beds)
 {
-    int i = 0;
-    reglist_t * bed = (reglist_t*)calloc(1,sizeof(reglist_t));
-    while(beds[i] == NULL) { i++; }
-    if ( i == n_beds ) {
-	freemem(bed);
+#ifdef _DEBUG_MODE
+    debug("[%s] n_beds : %d", __func__, n_beds);
+#endif
+    if (n_beds == 0)
 	return NULL;
-    }
+    assert(beds != NULL);
+    int i;
+    //for(i=0; i<n_beds && beds[i] == NULL; ++i);
+    //if ( i == n_beds-1 ) return NULL;
+    
+    reglist_t * bed = (reglist_t*)calloc(1,sizeof(reglist_t));
     bed->sorted = BD_IS_UNSORT;
-    bed->id = beds[i]->id;
+    bed->id = -1;
     bed->a = NULL;
     bed->n = bed->m = 0;
-    //*bed = { 0,0, 0, BD_IS_UNSORT, beds[0]->id, 0, 0, 0, 0, 0 };
-    for ( ; i < n_beds; ++i )
-    {
+    bed->count = NULL;
+    for (i=0; i < n_beds; ++i )
+    {	
 	if ( beds[i] == NULL || beds[i]->m == 0 ) continue;
-	if ( beds[i]->id != bed->id ) errabort("[%s]: beds[%d] != bed->id : %d\t%d", __func__, i, beds[i]->id, bed->id);
+	if (bed->id == -1)
+	    bed->id = beds[i]->id;
+	else if ( beds[i]->id != bed->id )
+	    errabort("[%s]: beds[%d] != bed->id : %d\t%d", __func__, i, beds[i]->id, bed->id);
+
 	if ( bed->n <= bed->m + beds[i]->m ) {
 	    bed->n = bed->m + beds[i]->m;
+	    assert(bed->n >0);
 	    kroundup32(bed->n);
+	    bed->a = (uint64_t*)realloc(bed->a, bed->n *sizeof(uint64_t));
 	}
-	bed->a = (uint64_t*)realloc(bed->a, bed->n *sizeof(uint64_t));
 	memcpy(bed->a + bed->m, beds[i]->a, beds[i]->m * sizeof(uint64_t));
 	bed->m += beds[i]->m;
 	bed->l_reg += beds[i]->l_reg;
+    }
+    if (bed->m == 0) {
+	if (bed->n)
+	    free(bed->a);
+	free(bed);
+	return NULL;
     }
     bed->count = (uint32_t*)malloc((bed->m+1)*sizeof(uint32_t));
     return bed;
@@ -285,16 +325,25 @@ static int check_reg_by_chromosome_length(reglist_t * bed)
 
 static void regcore_merge(reglist_t *bed) 
 {
-    if ( bed == NULL ) return;
+#ifdef _DEBUG_MODE
+    debug("[%s]", __func__);
+#endif
+
+    assert(bed != NULL);
+
     if ( bed->sorted & BD_IS_MERGED ) {
-	warnings("bed is already merged!");
+	errabort("bed is already merged!");
 	return;
     }
     uint32_t length = 0;
     if (bed->m == 0) {
-	goto mark;
+	errabort("bed is empty m==0");
+	return;
     }
     int i, m = 0;
+    if (bed->count == NULL) 
+	bed->count = (uint32_t*)calloc(bed->m, sizeof(uint32_t));
+
     for ( i = 0; i < bed->m; ++i)
 	bed->count[i] = 1;
     uint32_t lastbeg = 0, lastend = 0;
@@ -349,6 +398,10 @@ mark:
  */
 int pos_find(reglist_t *bed, uint32_t pos)
 {
+#ifdef _DEBUG_MODE
+    debug("[%s]", __func__);
+#endif
+    
     int low = 0;
     int high = bed->m;
     int mid;
@@ -377,11 +430,15 @@ int pos_find(reglist_t *bed, uint32_t pos)
 
 static reglist_t * reg_clone(reglist_t * bed)
 {
-    if ( bed == NULL ) return NULL;
+#ifdef _DEBUG_MODE
+    debug("[%s]", __func__);
+#endif
+    assert (bed != NULL);
+    //if ( bed == NULL ) return NULL;
     reglist_t *bed1 = (reglist_t*)calloc(1, sizeof(reglist_t));
     memcpy(bed1, bed, sizeof(reglist_t));
     if ( bed->n ) {
-	bed1->a = (uint64_t*)calloc(bed->n, sizeof(uint64_t));
+       	bed1->a = (uint64_t*)calloc(bed->n, sizeof(uint64_t));
 	memcpy(bed1->a, bed->a, bed->n *sizeof(uint64_t));
     }
     // index and data
@@ -390,13 +447,22 @@ static reglist_t * reg_clone(reglist_t * bed)
 
 static reglist_t * reg_merge(reglist_t ** beds, int n_beds)
 {
+#ifdef _DEBUG_MODE
+    debug("[%s] n_beds : %d", __func__,n_beds);
+#endif
+    if (beds == NULL || n_beds == 0) return NULL;
     reglist_t *bed = reg_add(beds, n_beds);
+    if (bed==NULL) return NULL;
     regcore_merge(bed);
     return bed;
 }
 
 static reglist_t * reg_uniq(reglist_t ** regs, int n_bed ) 
 {
+#ifdef _DEBUG_MODE
+    debug("[%s] n_bed : %d", __func__,n_bed);
+#endif
+
     int i, l;
     if ( n_bed < 2 ) return NULL;
     reglist_t * bed = NULL;
@@ -409,11 +475,14 @@ static reglist_t * reg_uniq(reglist_t ** regs, int n_bed )
 	}
 	if ( id  == -1 ) id = regs[l]->id;
 	else if (id != regs[l]->id ) errabort("[%s]: bed->id != regs[i]->id", __func__, l);
-	if ( !(regs[l]->sorted & BD_IS_MERGED) ) regcore_merge(regs[l]);
+	if ( !(regs[l]->sorted & BD_IS_MERGED) )
+	    regcore_merge(regs[l]);
 	reglist_t * a[] = { bed, regs[l] };
 	reglist_t * newbed = reg_add(a, 2);
 	if ( bed ) {
-	    clear_reg(bed, destroy_void);
+	    destroy_reg(bed);
+	    bed=NULL;
+	    //clear_reg(bed, destroy_void);
 	    //freemem(bed);
 	} else {
 	    bed = newbed;
@@ -494,6 +563,10 @@ static reglist_t * reg_uniq(reglist_t ** regs, int n_bed )
 
 static reglist_t * reg_diff(reglist_t ** regs, int n_regs)
 {
+#ifdef _DEBUG_MODE
+    debug("[%s] n_regs: %d", __func__,n_regs);
+#endif
+
     int i, j = 0;
     assert ( n_regs > 0 );
     if ( n_regs ==  1 ) {
@@ -501,21 +574,24 @@ static reglist_t * reg_diff(reglist_t ** regs, int n_regs)
 	regcore_merge(bed);
 	return bed;
     }
+    if (regs[0] == NULL) return NULL;
     reglist_t * mrgs = reg_merge( regs+1, n_regs -1 );
+    if (mrgs == NULL) 
+	return reg_clone(regs[0]);
+    
     reglist_t * tmp[] = { regs[0], mrgs };
     reglist_t * uniq = reg_uniq(tmp, 2);
     //regcore_merge(uniq);
     reglist_t * tmp1[] = { regs[0], uniq };
     reglist_t * reg = reg_add(tmp1, 2);
-    clear_reg(mrgs, destroy_void);
-    clear_reg(uniq, destroy_void);
+    destroy_reg(mrgs);
+    destroy_reg(uniq);
     reg_sort(reg);
     uint64_t *b;
     b = (uint64_t*)needmem((reg->m+1) * sizeof(uint64_t));
     uint32_t lastbeg = 0; uint32_t lastend = 0;
     uint32_t length = 0;
-    for (i = 0; i < reg->m; ++i)
-    {
+    for (i = 0; i < reg->m; ++i) {
 	uint32_t beg, end;
 	beg = reg->a[i]>>32; end = (uint32_t)reg->a[i];
 
@@ -603,7 +679,7 @@ static reglist_t * reg_diff(reglist_t ** regs, int n_regs)
 	    b[j++] = (uint64_t) lastbeg << 32| beg ; // 0based beg
 	} else {
 	    errabort("FIXME: not properly sorted!"
-		     "Contact developer if you see this message!");
+	     "Contact developer if you see this message!");
 	}
     
 	/* condition 6: 
@@ -666,6 +742,10 @@ static reglist_t * reg_diff(reglist_t ** regs, int n_regs)
 
 static reglist_t * reg_comp(reglist_t **regs, int n_regs)
 {
+#ifdef _DEBUG_MODE
+    debug("[%s] n_regs: %d", __func__, n_regs);
+#endif
+    
     if ( n_regs == 1 ) {
 	reglist_t *bed = reg_clone(regs[0]);
 	regcore_merge(bed);
@@ -685,6 +765,10 @@ struct cut_pos {
     
 static reglist_t *reg_split(reglist_t **reg, int n_regs)
 {
+#ifdef _DEBUG_MODE
+    debug("[%s] n_reg : %d", __func__,n_regs);
+#endif
+
     reglist_t *rb = reg_add(reg, n_regs);
     reg_sort(rb);
     uint64_t *b;
@@ -791,6 +875,10 @@ typedef reglist_t * (*handle_func)(reglist_t ** regs, int n_regs);
 
 static bedaux_t * bed_handle(bedaux_t *beds, handle_func func, int *check_error)
 {
+#ifdef _DEBUG_MODE
+    debug("[%s] func: %p", __func__, func);
+#endif
+    
     bedaux_t * beda = (bedaux_t *)calloc(1, sizeof(bedaux_t));
     beda->alloced = 2;
     beda->is_empty = BD_IS_EMPTY;
@@ -828,6 +916,9 @@ static bedaux_t * bed_handle(bedaux_t *beds, handle_func func, int *check_error)
 	    }
 	}
 	if ( m == 0 ) continue;
+#ifdef _DEBUG_MODE
+	debug("[%s] name: %s =======", __func__, beds->seq_names[i]);
+#endif
 	reglist_t * bed1 = func(regs, n);
 	if ( bed1 == NULL ) continue;
 	beda->region += bed1->m;
@@ -847,29 +938,49 @@ static bedaux_t * bed_handle(bedaux_t *beds, handle_func func, int *check_error)
 
 static bedaux_t * bed_merge(bedaux_t *beds, int *check_error)
 {
+#ifdef _DEBUG_MODE
+    debug("[%s]", __func__);
+#endif
+    
     return bed_handle(beds, reg_merge, check_error);
 }
 
 static bedaux_t * bed_uniq(bedaux_t *beds)
 {
+#ifdef _DEBUG_MODE
+    debug("[%s]", __func__);
+#endif
+
     int check = BD_CHECK_NO;
     return bed_handle(beds, reg_uniq, &check);
 }
 
 static bedaux_t * bed_diff(bedaux_t *beds)
 {
+#ifdef _DEBUG_MODE
+    debug("[%s]", __func__);
+#endif
+
     int check = BD_CHECK_NO;
     return bed_handle(beds, reg_diff, &check);
 }
 
 static bedaux_t * bed_count(bedaux_t *beds)
 {
+#ifdef _DEBUG_MODE
+    debug("[%s]", __func__);
+#endif
+    
     int check = BD_CHECK_NO;
     return bed_handle(beds, reg_split, &check);
 }
 
 static void bed_save(const char *fn, bedaux_t * bed) 
 {
+#ifdef _DEBUG_MODE
+    debug("[%s]", __func__);
+#endif
+    
     FILE *fp;
     fp = open_wfile(fn);
     khiter_t k;
@@ -899,6 +1010,10 @@ static void bed_save(const char *fn, bedaux_t * bed)
 
 static bedaux_t * bed_comp(bedaux_t * bed)
 {
+#ifdef _DEBUG_MODE
+    debug("[%s]", __func__);
+#endif
+
     int check = BD_CHECK_NO;
     return bed_handle(bed, reg_comp, &check);
 }

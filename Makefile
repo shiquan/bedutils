@@ -1,5 +1,5 @@
 CC=		gcc
-CFLAGS=		-g -Wall -O0
+CFLAGS= -Wall
 LOBJS=		bedutil.o commons.o
 PROG=		bedutils
 INCLUDES=	-I.
@@ -17,7 +17,10 @@ all:clean $(PROG)
 .PHONY:all  clean
 
 bedutils:
-		$(CC) $(CFLAGS) $(LDFLAGS) $(LIBPATH) $(INCLUDES) -lz -o $@ bedutil.c commons.c kstring.c bedtk.c
+		$(CC) -O3 $(CFLAGS) $(LDFLAGS) $(LIBPATH) $(INCLUDES) -lz -o $@ bedutil.c commons.c kstring.c bedtk.c
+
+debug:
+		$(CC) -g -O0 $(CFLAGS) $(LDFLAGS) $(LIBPATH) $(INCLUDES) -lz -D_DEBUG_MODE -o bedutils bedutil.c commons.c kstring.c bedtk.c
 
 clean:
 		rm -fr gmon.out *.o a.out *.exe *.dSYM  $(PROG) *~ *.a 

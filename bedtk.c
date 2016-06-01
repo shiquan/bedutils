@@ -383,7 +383,7 @@ void count_regions(bedaux_t *bed)
 	k = kh_get(reg, rgh, bed->seq_names[l]);
 	if ( k == kh_end(rgh) ) continue;
 	reglist_t *reg = kh_val(rgh, k);
-	uint32_t lastbeg, lastend = 0;
+	uint32_t lastbeg=0, lastend = 0;
 	uint32_t count = 0;
 	for ( i= 0; i < reg->m; ++i)
 	{
