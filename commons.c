@@ -104,7 +104,7 @@ open_wfile(char const *file)
 {
     FILE *fp;
     if (STREQ(file, "-"))
-	fp = stderr;
+	fp = stdout;
     else
     {
 	fp = fopen(file, "w");

@@ -155,6 +155,7 @@ static void bed_read(const char *fn, bedaux_t * reg, int right_flank, int left_f
 	    p->a = (uint64_t*)realloc(p->a, p->n*sizeof(uint64_t));
 	}
 	p->a[p->m++] = (uint64_t)beg<<32 | (uint32_t)end;
+	str->l = 0;
     }
 
     bedfile_t *bed = reg->hfiles[nfile];
