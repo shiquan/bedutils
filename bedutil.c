@@ -779,8 +779,7 @@ static reglist_t *reg_split(reglist_t **reg, int n_regs)
     int m = 0;
     uint32_t lastbeg = 0;
     struct cut_pos *lastends = NULL;
-    for (i = 0; i < rb->m; ++i)
-    {
+    for (i = 0; i < rb->m; ++i) {
 	uint32_t beg = rb->a[i]>>32;
 	uint32_t end = (uint32_t)rb->a[i];
 	struct cut_pos *curr_end = (struct cut_pos*)malloc(sizeof(struct cut_pos));
@@ -802,8 +801,7 @@ static reglist_t *reg_split(reglist_t **reg, int n_regs)
 	    }
 	    struct cut_pos * tmp = lastends;
 	    uint32_t cut = tmp->pos > beg ? beg : tmp->pos;
-	    while (tmp)
-	    {
+	    while (tmp) {
 		if (beg < cut) {
 		    b[m++] = (uint64_t)lastbeg<<32|beg;
 		} else {
@@ -816,8 +814,7 @@ static reglist_t *reg_split(reglist_t **reg, int n_regs)
 		}
 	    }
 	    lastbeg = cut;
-	    while (lastends && cut == lastends->pos)
-	    {
+	    while (lastends && cut == lastends->pos) {
 		struct cut_pos *tmp1 = lastends;
 		lastends = lastends->next;
 		freemem(tmp1);
@@ -847,7 +844,7 @@ static reglist_t *reg_split(reglist_t **reg, int n_regs)
 	    if (lastbeg < cut ) {
 		b[m++] = (uint64_t)lastbeg<<32|cut;
 	    } else {
-		errabort("FIXME: %d\t%d", lastbeg, cut);
+		errabort("FIXME:[%s] %d, %d\t%d", __func__, __LINE__, lastbeg, cut);
 	    }
 	    if ( m == n ) {
 		n = m*2;

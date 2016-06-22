@@ -67,10 +67,12 @@ int mergeBed(int argc, char * argv[], int trim_tag)
     if ( out ) bedHand->save(out, bed1);
     assert(bed.region >= bed1->region);
     uint32_t merge_regions = bed.region - bed1->region;
-    fprintf(stderr, "Merged %u regions.\n"
-	    "Total number of regions : %u.\n"
-	    "Length of these regions : %u bp.\n",
-	    merge_regions, bed1->region, bed1->length);
+    if (strcmp(out, "-")) {
+	fprintf(stderr, "Merged %u regions.\n"
+		"Total number of regions : %u.\n"
+		"Length of these regions : %u bp.\n",
+		merge_regions, bed1->region, bed1->length);
+    }
     bedHand->destroy(bed1, destroy_void);
     bedHand->clear(&bed, destroy_void);
     return 0;
@@ -98,9 +100,11 @@ int uniqBed(int argc, char * argv[])
   
     bedaux_t *bed1 = bedHand->uniq(&bed);
     if ( out ) bedHand->save(out, bed1);
-    fprintf(stderr, "Total number of regions : %u.\n"
-	    "Length of the uniq regions : %d bp.\n",
-	    bed1->region, bed1->length);
+    if (strcmp(out, "-")) {
+	fprintf(stderr, "Total number of regions : %u.\n"
+		"Length of the uniq regions : %d bp.\n",
+		bed1->region, bed1->length);
+    }
     bedHand->destroy( bed1, destroy_void );
     bedHand->clear( &bed, destroy_void );
     return 1;
@@ -127,9 +131,11 @@ int diffBed(int argc, char * argv[])
     }  
     bedaux_t *bed1 = bedHand->diff(&bed);
     if ( out ) bedHand->save(out, bed1);
-    fprintf(stderr, "Total number of regions : %u.\n"
-	    "There are %d bp included in the first bed files compared with others.\n",
-	    bed1->region, bed1->length);
+    if (strcmp(out, "-")) {
+	fprintf(stderr, "Total number of regions : %u.\n"
+		"There are %d bp included in the first bed files compared with others.\n",
+		bed1->region, bed1->length);
+    }
     bedHand->destroy( bed1, destroy_void );
     bedHand->clear( &bed, destroy_void );
     return 0;
@@ -146,11 +152,12 @@ int trimBed(int argc, char *argv[])
     if ( out ) bedHand->save(out, bed1);
     assert(bed.length >= bed1->length);
     uint32_t trimmed_length = bed.length - bed1->length;
-
-    fprintf(stderr, "Trimmed %u bp.\n"
-	    "Total number of regions : %u.\n"
-	    "Length of these regions : %u bp.\n",
-	    trimmed_length, bed1->region, bed1->length);
+    if (strcmp(out, "-")) {
+	fprintf(stderr, "Trimmed %u bp.\n"
+		"Total number of regions : %u.\n"
+		"Length of these regions : %u bp.\n",
+		trimmed_length, bed1->region, bed1->length);
+    }
     bedHand->destroy(bed1, destroy_void);
     bedHand->clear(&bed, destroy_void);
     return 0;
