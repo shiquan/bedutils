@@ -40,16 +40,16 @@ void warnings(char *format, ...)
     va_end(args);
 }
 
-void errabort(char *format, ...)
-{
-    va_list args;
-    va_start(args, format);
-    fprintf(stderr, "@@ ERROR ABORT @@ \n");
-    vfprintf(stderr, format, args);
-    fprintf(stderr, "\n");
-    va_end(args);
-    exit(-1);
-}
+/* void errabort(char *format, ...) */
+/* { */
+/*     va_list args; */
+/*     va_start(args, format); */
+/*     fprintf(stderr, "@@ ERROR ABORT @@ \n"); */
+/*     vfprintf(stderr, format, args); */
+/*     fprintf(stderr, "\n"); */
+/*     va_end(args); */
+/*     exit(-1); */
+/* } */
 
 void debug(char const *format, ...)
 {

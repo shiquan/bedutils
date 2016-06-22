@@ -81,7 +81,16 @@
 
 void writeout(char *format, ...);
 void warnings(char *format, ...);
-void errabort(char *format, ...);
+
+#define str_errno() (errno == 0 ? "None" : strerror(errno))
+
+#define errabort(line, ...) do						\
+    {									\
+	fprintf(stderr, "[error] func:%s, line:%d, errno:%s. " line "\n", __FUNCTION__, __LINE__, str_errno(), ##__VA_ARGS__); \
+	errno = 0;							\
+	exit(EXIT_FAILURE);						\
+    }while(0)
+
 void LOG(char *format, ...);
 void debug(char const *format, ...);
 FILE *stream_open(char const *file, char const *mode);
@@ -94,13 +103,12 @@ void *needmem(size_t size);
 void freemem(void *pt);
 void mustfree(void *pt);
 
-#define mustfree(pt) do {												\
- if (isNull(pt))														\
-	 {																	\
-	 errabort("%s : %d Trying to free an empty point!", __FILE__, __LINE__); \
-	 }																	\
- free(pt);																\
- } while(0)
+#define mustfree(pt) do {\
+	if (isNull(pt)) {\
+	    errabort("%s : %d Trying to free an empty point!", __FILE__, __LINE__); \
+	    }\
+	free(pt);				\
+    } while(0)
 
 void *needlargemem(size_t size);
 void *resizemem(void *vp, size_t size);
@@ -109,11 +117,10 @@ void *enlarge_empty_mem(void *vp, size_t old_size, size_t new_size);
 void *enlarge_empty_largemem(void *vp, size_t old_size, size_t new_size);
 
 #define errassert(assertion, ...)  do {			\
- if (assertion)									\
-	 {											\
-	 fprintf(stderr, __VA_ARGS__);				\
-	 fprintf(stderr, "\n");						\
-	 assert(0);									\
-	 } while(0)
+	if (assertion)	{				\
+	    fprintf(stderr, __VA_ARGS__);				\
+	    fprintf(stderr, "\n");					\
+	    assert(0);							\
+	} while(0)
 
 #endif

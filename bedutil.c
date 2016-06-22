@@ -474,8 +474,11 @@ static reglist_t * reg_uniq(reglist_t ** regs, int n_bed )
 	    if(bed) destroy_reg(bed);
 	    return NULL;
 	}
-	if ( id  == -1 ) id = regs[l]->id;
-	else if (id != regs[l]->id ) errabort("[%s]: bed->id != regs[i]->id", __func__, l);
+	if ( id  == -1 )
+	    id = regs[l]->id;
+	else if (id != regs[l]->id )
+	    errabort("bed->id != regs[%d]->id",l);
+	
 	if ( !(regs[l]->sorted & BD_IS_MERGED) )
 	    regcore_merge(regs[l]);
 	reglist_t * a[] = { bed, regs[l] };
