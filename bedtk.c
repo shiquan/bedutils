@@ -67,7 +67,7 @@ int mergeBed(int argc, char * argv[], int trim_tag)
     if ( out ) bedHand->save(out, bed1);
     assert(bed.region >= bed1->region);
     uint32_t merge_regions = bed.region - bed1->region;
-    if (strcmp(out, "-")) {
+    if (out == NULL) {
 	fprintf(stderr, "Merged %u regions.\n"
 		"Total number of regions : %u.\n"
 		"Length of these regions : %u bp.\n",
