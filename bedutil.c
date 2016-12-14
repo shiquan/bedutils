@@ -8,6 +8,7 @@
 #include "ksort.h"
 #include "kseq.h"
 #include "kstring.h"
+#include "number.h"
 
 KSORT_INIT_GENERIC(uint64_t)
 
@@ -102,14 +103,14 @@ static void bed_read(const char *fn, bedaux_t * reg, int right_flank, int left_f
 	}
 	char *name = str->s + splits[0];
 	char *tmp = str->s + splits[1];
-	if (isdigit(tmp[0]))
-	    beg = atoi(str->s + splits[1]);
-	if (beg == -1) {
+	if ( check_num_likely(tmp) ) {
+	    beg = str2int(tmp);
+        } else {
 	    warnings("%s: line %d is malformed! skip... ", fn, line);
 	    continue;
 	}
-	if (nfields > 2) {
-	    end = atoi(str->s + splits[2]);
+	if (nfields > 2 && check_num_likely(str->s+splits[2])) {
+	    end = str2int(str->s + splits[2]);
 	}
 	free(splits);
 	khiter_t k;
@@ -847,7 +848,7 @@ static reglist_t *reg_split(reglist_t **reg, int n_regs)
 	    if (lastbeg < cut ) {
 		b[m++] = (uint64_t)lastbeg<<32|cut;
 	    } else {
-		errabort("FIXME:[%s] %d, %d\t%d", __func__, __LINE__, lastbeg, cut);
+		errabort("FIXME: %d\t%d", __func__, __LINE__, lastbeg, cut);
 	    }
 	    if ( m == n ) {
 		n = m*2;

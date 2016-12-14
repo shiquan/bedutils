@@ -1,7 +1,7 @@
 #include "bedutil.h"
 #include "commons.h"
 
-const char * version = "0.1.3";
+const char * version = "0.1.4";
 
 extern bedHandle_t *bedHand;
 
