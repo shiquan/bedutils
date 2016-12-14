@@ -155,6 +155,9 @@ int check_num_likely(const char *str)
             case 'x':
             case 'X':
             case '.':
+            case '+':
+            case '-':
+            case ' ':
                 continue;
                 break;
                 
