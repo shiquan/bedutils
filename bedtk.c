@@ -99,8 +99,9 @@ int uniqBed(int argc, char * argv[])
     }
   
     bedaux_t *bed1 = bedHand->uniq(&bed);
-    if ( out ) bedHand->save(out, bed1);
-    if (strcmp(out, "-")) {
+    if ( out ) {
+        bedHand->save(out, bed1);
+    } else {
 	fprintf(stderr, "Total number of regions : %u.\n"
 		"Length of the uniq regions : %d bp.\n",
 		bed1->region, bed1->length);
@@ -130,8 +131,9 @@ int diffBed(int argc, char * argv[])
 	errabort("At least 2 files for uniq.");    
     }  
     bedaux_t *bed1 = bedHand->diff(&bed);
-    if ( out ) bedHand->save(out, bed1);
-    if (strcmp(out, "-")) {
+    if ( out ) {
+        bedHand->save(out, bed1);
+    } else {
 	fprintf(stderr, "Total number of regions : %u.\n"
 		"There are %d bp included in the first bed files compared with others.\n",
 		bed1->region, bed1->length);
@@ -149,10 +151,12 @@ int trimBed(int argc, char *argv[])
     if( init_argv(argc, argv, &bed) ) return mergeHelp(trim_tag);
     int check = BD_CHECK_NO;
     bedaux_t * bed1 = bedHand->merge(&bed, &check);
-    if ( out ) bedHand->save(out, bed1);
+
     assert(bed.length >= bed1->length);
     uint32_t trimmed_length = bed.length - bed1->length;
-    if (strcmp(out, "-")) {
+    if ( out ) {
+        bedHand->save(out, bed1);
+    } else {
 	fprintf(stderr, "Trimmed %u bp.\n"
 		"Total number of regions : %u.\n"
 		"Length of these regions : %u bp.\n",
